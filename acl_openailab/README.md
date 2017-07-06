@@ -1,4 +1,4 @@
-![OPEN AI LAB](https://github.com/OAID/mxnetOnACL/tree/master/acl_openailab/pics/openailab.png)
+![OPEN AI LAB](https://github.com/OAID/mxnetOnACL/blob/master/acl_openailab/pics/openailab.png)
 
 # 1. Release Notes
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
