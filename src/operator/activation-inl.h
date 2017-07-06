@@ -83,8 +83,13 @@ class ActivationOp : public Operator {
 };  // class ActivationOp
 
 // Decalre Factory function, used for dispatch specialization
+#if USE_ACL == 1
+template<typename xpu>
+Operator* CreateOp(ActivationParam type, int dtype,Context & ctx);
+#else
 template<typename xpu>
 Operator* CreateOp(ActivationParam type, int dtype);
+#endif
 
 #if DMLC_USE_CXX11
 class ActivationProp : public OperatorProperty {

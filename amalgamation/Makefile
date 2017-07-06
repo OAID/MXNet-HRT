@@ -13,10 +13,18 @@ else
 	DEFS=-DMSHADOW_USE_CBLAS=0
 endif
 
+ifndef DLPACK_PATH
+  	DLPACK_PATH = $(MXNET_ROOT)/dlpack
+endif
+
 ifndef ANDROID
     export ANDROID=0
 else
     DEFS+=-DMSHADOW_USE_SSE=0
+endif
+
+ifndef USE_ACL
+   DEFS+=-DUSE_ACL=0
 endif
 
 # Use locally installed emscripten if not specified
@@ -32,7 +40,13 @@ endif
 
 DEFS+=-DMSHADOW_USE_CUDA=0 -DMSHADOW_USE_MKL=0 -DMSHADOW_RABIT_PS=0 -DMSHADOW_DIST_PS=0 -DDMLC_LOG_STACK_TRACE=0
 DEFS+=-DMSHADOW_FORCE_STREAM -DMXNET_USE_OPENCV=0 -DMXNET_PREDICT_ONLY=1
-CFLAGS=-std=c++11 -Wno-unknown-pragmas -Wall $(DEFS)
+CFLAGS=-std=c++11 -Wno-unknown-pragmas -Wall -I$(DLPACK_PATH)/include $(DEFS)
+ifeq ($(USE_ACL), 1)
+	CFLAGS += -DUSE_ACL -std=c++11 -I.  -Dfopen64=fopen
+	CFLAGS +=$(foreach includedir,$(ACL_INCS),-I$(includedir)) 
+        LDFLAGS += $(foreach librarydir,$(ACL_LIBS_DIR),-L$(librarydir))
+	LDFLAGS += $(foreach library,$(ACL_LIBS),-l$(library))
+endif
 ifneq ($(MIN), 1)
 	CFLAGS += -I${OPENBLAS_ROOT} -I${OPENBLAS_ROOT}/include
 	LDFLAGS+= -L${OPENBLAS_ROOT} -L${OPENBLAS_ROOT}/lib

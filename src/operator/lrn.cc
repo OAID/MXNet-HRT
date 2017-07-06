@@ -14,13 +14,25 @@
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_lrn-inl.h"
 #endif
+#if USE_ACL == 1
+#include "./acl/acl_lrn-inl.h"
+#endif  // USE_ACL
 
 namespace mxnet {
 namespace op {
+#if USE_ACL == 1
+template<>
+Operator *CreateOp<cpu>(LRNParam param, int dtype,Context & ctx) {
+#else
 template<>
 Operator* CreateOp<cpu>(LRNParam param, int dtype) {
+#endif
 #if MXNET_USE_MKL2017 == 1
   return new MKLLRNOp<cpu, float>(param);
+#endif
+#if USE_ACL == 1
+  if (dtype==mshadow::kFloat32) 
+    return new ACLLocalResponseNormOp<cpu, float>(ctx,param);
 #endif
   return new LocalResponseNormOp<cpu>(param);
 }
@@ -32,7 +44,11 @@ Operator* LocalResponseNormProp::CreateOperatorEx(Context ctx, std::vector<TShap
     std::vector<int> out_type, aux_type;
     CHECK(InferType(in_type, &out_type, &aux_type));
     CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-    DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
+#if USE_ACL == 1
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0],ctx);
+#else
+   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
+#endif
 }
 
 DMLC_REGISTER_PARAMETER(LRNParam);

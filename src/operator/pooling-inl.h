@@ -127,9 +127,13 @@ class PoolingOp : public Operator {
   PoolingParam param_;
 };  // class PoolingOp
 
+#if USE_ACL == 1
+template<typename xpu>
+Operator* CreateOp(PoolingParam param, int dtype,Context & ctx);
+#else
 template<typename xpu>
 Operator* CreateOp(PoolingParam param, int dtype);
-
+#endif
 
 #if DMLC_USE_CXX11
 class PoolingProp : public OperatorProperty {

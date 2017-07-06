@@ -13,12 +13,20 @@
 #if MXNET_USE_NNPACK == 1
 #include "./nnpack/nnpack_pooling-inl.h"
 #endif  // MXNET_USE_NNPACK
+#if USE_ACL == 1
+#include "./acl/acl_pooling-inl.h"
+#endif  // USE_ACL
 
 namespace mxnet {
 namespace op {
 
+#if USE_ACL == 1
+template<>
+Operator *CreateOp<cpu>(PoolingParam param, int dtype,Context & ctx) {
+#else
 template<>
 Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
+#endif
   Operator *op = NULL;
   // TODO(lingyan): kFull use exclude padding algorithm now
 #if MXNET_USE_MKL2017 == 1
@@ -53,6 +61,10 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
     }
   }
 #endif
+#if USE_ACL == 1
+  if (dtype==mshadow::kFloat32) 
+    return new ACLPoolingOp<cpu, float>(ctx,param);
+#endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     if (pool_enum::kMaxPooling == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
@@ -74,7 +86,11 @@ Operator* PoolingProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_sha
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
+#if USE_ACL == 1
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0],ctx);
+#else
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
+#endif
 }
 
 DMLC_REGISTER_PARAMETER(PoolingParam);

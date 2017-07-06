@@ -61,6 +61,13 @@ else
 	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
 
+ifeq ($(USE_ACL), 1)
+	CFLAGS += -DUSE_ACL -std=c++11 -I$(ROOTDIR)/src/operator/acl
+	CFLAGS +=$(foreach includedir,$(ACL_INCS),-I$(includedir)) 
+        LDFLAGS += $(foreach librarydir,$(ACL_LIBS_DIR),-L$(librarydir))
+	LDFLAGS += $(foreach library,$(ACL_LIBS),-l$(library))
+endif
+
 # CFLAGS for profiler
 ifeq ($(USE_PROFILER), 1)
 	CFLAGS += -DMXNET_USE_PROFILER=1
@@ -260,7 +267,7 @@ DMLCCORE:
 NNVM_INC = $(wildcard $(NNVM_PATH)/include/*/*.h)
 NNVM_SRC = $(wildcard $(NNVM_PATH)/src/*/*/*.cc $(NNVM_PATH)/src/*/*.cc $(NNVM_PATH)/src/*.cc)
 $(NNVM_PATH)/lib/libnnvm.a: $(NNVM_INC) $(NNVM_SRC)
-	+ cd $(NNVM_PATH); $(MAKE) lib/libnnvm.a DMLC_CORE_PATH=$(DMLC_CORE); cd $(ROOTDIR)
+	+ cd $(NNVM_PATH); $(MAKE) lib/libnnvm.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); DMLC_CORE_PATH=$(DMLC_CORE); cd $(ROOTDIR)
 
 bin/im2rec: tools/im2rec.cc $(ALLX_DEP)
 

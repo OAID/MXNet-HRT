@@ -5,12 +5,24 @@
  * \author Bing Xu
 */
 #include "./softmax_output-inl.h"
+#if USE_ACL == 1
+#include "./acl/acl_softmax_output-inl.h"
+#endif  // USE_ACL
 
 namespace mxnet {
 namespace op {
+#if USE_ACL == 1
+template<>
+Operator *CreateOp<cpu>(SoftmaxOutputParam param, int dtype,Context & ctx) {
+#else
 template<>
 Operator *CreateOp<cpu>(SoftmaxOutputParam param, int dtype) {
+#endif
   Operator *op = NULL;
+#if USE_ACL == 1
+  if (dtype==mshadow::kFloat32) 
+    return new ACLSoftmaxOutputOp<cpu, float>(ctx,param);
+#endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new SoftmaxOutputOp<cpu, DType>(param);
   })
@@ -24,7 +36,11 @@ Operator *SoftmaxOutputProp::CreateOperatorEx(Context ctx, std::vector<TShape> *
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
+#if USE_ACL == 1
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0],ctx);
+#else
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
+#endif
 }
 
 DMLC_REGISTER_PARAMETER(SoftmaxOutputParam);

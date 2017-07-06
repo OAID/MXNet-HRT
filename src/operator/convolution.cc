@@ -14,6 +14,9 @@
 #if MXNET_USE_NNPACK == 1
 #include "./nnpack/nnpack_convolution-inl.h"
 #endif  // MXNET_USE_NNPACK
+#if USE_ACL == 1
+#include "./acl/acl_convolution-inl.h"
+#endif  // USE_ACL
 
 namespace mxnet {
 namespace op {
@@ -60,6 +63,10 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
       break;
     }
   }
+#endif
+#if USE_ACL == 1
+  if (dtype==mshadow::kFloat32) 
+    return new ACLConvolutionOp<cpu, float>(ctx,param);
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new ConvolutionOp<cpu, DType>(param);

@@ -8,7 +8,8 @@ blacklist = [
     'kvstore_dist.h', 'mach/clock.h', 'mach/mach.h',
     'malloc.h', 'mkl.h', 'mkl_cblas.h', 'mkl_vsl.h', 'mkl_vsl_functions.h',
     'nvml.h', 'opencv2/opencv.hpp', 'sys/stat.h', 'sys/types.h', 'cuda.h', 'cuda_fp16.h',
-    'omp.h', 'execinfo.h', 'packet/sse-inl.h', 'emmintrin.h', 'thrust/device_vector.h'
+    'omp.h', 'execinfo.h', 'packet/sse-inl.h', 'emmintrin.h', 'thrust/device_vector.h',
+    'nvrtc.h','ps/ps.h'
     ]
 
 minimum = int(sys.argv[6]) if len(sys.argv) > 5 else 0
@@ -98,7 +99,9 @@ def expand(x, pending, stage):
                 h not in sysheaders and
                 'mkl' not in h and
                 'nnpack' not in h and
-                not h.endswith('.cuh')): sysheaders.append(h)
+                'acl' not in h and
+                not h.endswith('.cc') and
+                not h.endswith('.cuh')):  sysheaders.append(h)
         else:
             expand.treeDepth+=1
             expand(source, pending + [x], stage)
@@ -141,6 +144,10 @@ print >>f, '''
 #endif
 
 #endif
+'''
+
+print >>f, '''
+#include "std_string_func.h"
 '''
 
 if minimum != 0 and android != 0 and 'complex.h' not in sysheaders:

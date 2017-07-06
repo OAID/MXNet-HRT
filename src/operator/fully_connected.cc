@@ -7,6 +7,9 @@
 #if MXNET_USE_NNPACK == 1
 #include "./nnpack/nnpack_fully_connected-inl.h"
 #endif  // MXNET_USE_NNPACK
+#if USE_ACL == 1
+#include "./acl/acl_fully_connected-inl.h"
+#endif  // USE_ACL
 
 namespace mxnet {
 namespace op {
@@ -26,6 +29,10 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype,
   default:
     break;
   }
+#endif
+#if USE_ACL == 1
+  if (dtype==mshadow::kFloat32) 
+    return new ACLFullyConnectedOp<cpu, float>(ctx,param);
 #endif
   switch (dtype) {
   case mshadow::kFloat32:

@@ -122,6 +122,10 @@ struct Context {
   };
   /*! \brief the device type we run the op on */
   DeviceType dev_type;
+#if USE_ACL == 1
+  bool use_mali_gpu_;
+  inline bool arm_gpu_mode() {return use_mali_gpu_;}
+#endif
   /*! \brief device id we are going to run it on */
   int32_t dev_id;
   /*! \brief default constructor */
@@ -239,6 +243,14 @@ inline bool Context::operator<(const Context &b) const {
 }
 inline Context Context::Create(DeviceType dev_type, int32_t dev_id) {
   Context ctx;
+#if USE_ACL == 1
+  ctx.use_mali_gpu_=false;
+  if (dev_type==kGPU) {
+    dev_type=kCPU;
+    dev_id=0;
+    ctx.use_mali_gpu_=true;
+  }
+#endif
   ctx.dev_type = dev_type;
   if (dev_id < 0) {
     ctx.dev_id = 0;

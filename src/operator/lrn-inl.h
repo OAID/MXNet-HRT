@@ -97,8 +97,13 @@ class LocalResponseNormOp : public Operator {
   LRNParam param_;
 };  // class LocalResponseNormOp
 
+#if USE_ACL == 1
+template<typename xpu>
+Operator *CreateOp(LRNParam param, int dtype,Context & ctx);
+#else
 template<typename xpu>
 Operator *CreateOp(LRNParam param, int dtype);
+#endif
 
 #if DMLC_USE_CXX11
 class LocalResponseNormProp : public OperatorProperty {

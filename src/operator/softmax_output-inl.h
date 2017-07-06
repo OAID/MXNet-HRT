@@ -232,8 +232,13 @@ class SoftmaxOutputOp : public Operator {
 };  // class SoftmaxOutputOp
 
 // Decalre Factory function, used for dispatch specialization
+#if USE_ACL == 1
+template<typename xpu>
+Operator* CreateOp(SoftmaxOutputParam param, int dtype,Context & ctx);
+#else
 template<typename xpu>
 Operator* CreateOp(SoftmaxOutputParam param, int dtype);
+#endif
 
 #if DMLC_USE_CXX11
 class SoftmaxOutputProp : public OperatorProperty {

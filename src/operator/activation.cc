@@ -11,11 +11,19 @@
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_relu-inl.h"
 #endif  // MXNET_USE_MKL2017
+#if USE_ACL == 1
+#include "./acl/acl_activation-inl.h"
+#endif  // USE_ACL
 
 namespace mxnet {
 namespace op {
+#if USE_ACL == 1
+template<>
+Operator *CreateOp<cpu>(ActivationParam param, int dtype,Context & ctx) {
+#else
 template<>
 Operator *CreateOp<cpu>(ActivationParam param, int dtype) {
+#endif  // USE_ACL
   Operator *op = NULL;
 #if MXNET_USE_MKL2017 == 1
   if (param.act_type == activation::kReLU) {
@@ -30,6 +38,25 @@ Operator *CreateOp<cpu>(ActivationParam param, int dtype) {
   }
   if (enableMKLWarnGenerated())
     LOG(INFO) << MKLReluOp<cpu, float>::getName() << " Skip MKL optimization";
+#endif
+#if USE_ACL == 1
+  if(dtype==mshadow::kFloat32){
+      switch (param.act_type) {
+        case activation::kReLU:
+          op = new ACLActivationOp<cpu, mshadow_op::relu, mshadow_op::relu_grad, float>(ctx,param);
+          break;
+        case activation::kSigmoid:
+          op = new ACLActivationOp<cpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad, float>(ctx,param);
+          break;
+        case activation::kTanh:
+          op = new ACLActivationOp<cpu, mshadow_op::tanh, mshadow_op::tanh_grad, float>(ctx,param);
+          break;
+        case activation::kSoftReLU:
+          op = new ACLActivationOp<cpu, mshadow_op::softrelu, mshadow_op::softrelu_grad, float>(ctx,param);
+          break;
+      }
+  }
+  if (op) return op;
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     switch (param.act_type) {
@@ -59,7 +86,11 @@ Operator *ActivationProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
+#if USE_ACL == 1
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0],ctx);
+#else
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
+#endif
 }
 
 DMLC_REGISTER_PARAMETER(ActivationParam);
