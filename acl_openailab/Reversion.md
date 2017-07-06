@@ -27,7 +27,7 @@ There are some compatibility issues between ACL and mxnet's operators, we bypass
 * Performance need be fine turned in the future
 
 # Changelist
-The caffe based version is `793bd96351749cb8df16f1581baf3e7d8036ac37`.
+The mxnet based version is `26b1cb9ad0bcde9206863a6f847455ff3ec3c266`.
 ## New Files :
 *	acl_openailab\README.md
 *	acl_openailab\Reversion.md
