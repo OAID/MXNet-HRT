@@ -1,5 +1,5 @@
 # Release Note
-[![License](https://img.shields.io/badge/license-BSD-blue.svg)](LICENSE)
+[![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
 
 The release version is 0.1.0. You can download the source code from [OAID/mxnetOnACL](https://github.com/OAID/mxnetOnACL)
 
