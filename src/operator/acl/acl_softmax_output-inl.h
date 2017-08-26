@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2016 by Contributors
- * \file acl_convolution-inl.h
+ * \file acl_softmax_output-inl.h
  * \brief
  * \author Joey
 */
@@ -53,12 +53,18 @@ class ACLSoftmaxOutputOp : public SoftmaxOutputOp<xpu, DType>,public ACLBaseLaye
       DType * input_data =in_data[softmaxout_enum::kData].dptr<DType>();
       DType * output_data =out_data[softmaxout_enum::kOut].dptr<DType>();
       if (is_gpu_) {
-          this->gpu().input=new_tensor<GPUTensor>(shape,(void*)input_data);
-          this->gpu().output=new_tensor<GPUTensor>(shape,(void*)output_data);
+          new_tensor(this->gpu().input,shape,(void*)input_data);
+          new_tensor(this->gpu().output,shape,(void*)output_data);
+#ifdef USE_PROFILING
+        logtime_util log_time(ACL_CONFIG_INFO);
+#endif //USE_PROFILING
           this->gpu().layer->configure(this->gpu().input,this->gpu().output);
       }else{
-          this->cpu().input=new_tensor<CPUTensor>(shape,(void*)input_data);
-          this->cpu().output=new_tensor<CPUTensor>(shape,(void*)output_data);
+          new_tensor(this->cpu().input,shape,(void*)input_data);
+          new_tensor(this->cpu().output,shape,(void*)output_data);
+#ifdef USE_PROFILING
+        logtime_util log_time(ACL_CONFIG_INFO);
+#endif //USE_PROFILING
           this->cpu().layer->configure(this->cpu().input,this->cpu().output);
       }
   }
@@ -69,6 +75,7 @@ class ACLSoftmaxOutputOp : public SoftmaxOutputOp<xpu, DType>,public ACLBaseLaye
     this->param_ = p;
     this->ctx_ = ctx;
     this->is_gpu_ = ctx_.arm_gpu_mode();
+    this->force_bypass_acl_path_= bypass_acl_class_layer & FLAGS_ENABLE_ACL_SOFTMAX;
   }
 
  public:
@@ -81,6 +88,9 @@ class ACLSoftmaxOutputOp : public SoftmaxOutputOp<xpu, DType>,public ACLBaseLaye
       this->channels_ = ishape[1]; 
       this->inner_num_= ishape[0];
       this->outer_num_= oshape[0];
+#ifdef USE_PROFILING
+    logtime_util log_time(ACL_SOFTMAX_INFO);
+#endif //USE_PROFILING
       if (this->force_bypass_acl_path_|| this->inner_num_>1){
          SoftmaxOutputOp<xpu, DType>::Forward(ctx,in_data,req,out_data,aux_args);
          return ;

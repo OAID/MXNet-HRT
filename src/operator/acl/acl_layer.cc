@@ -1,5 +1,40 @@
 #if USE_ACL == 1
+unsigned int bypass_acl_class_layer =    (0 | \
+                                          /*0xffffffff |*/ \
+                                          /*FLAGS_ENABLE_ACL_FC |*/ \
+                                          /*FLAGS_ENABLE_ACL_LRN |*/ \
+                                          0 );
+
 #include "acl_layer.h"
+#ifdef USE_PROFILING
+
+#include "arm_neon.h"
+
+unsigned int acl_log_flags = (0 | \
+                              MASK_LOG_APP_TIME | \
+                            /*MASK_LOG_ALLOCATE | */\
+                            /*MASK_LOG_ALLOCATE | */\
+                            /*MASK_LOG_RUN      | */\
+                            /*MASK_LOG_CONFIG   | */\
+                            /*MASK_LOG_COPY     | */\
+                              MASK_LOG_ABSVAL   | \
+                              MASK_LOG_BNLL     | \
+                              MASK_LOG_CONV     | \
+                              MASK_LOG_FC       | \
+                              MASK_LOG_LRN      | \
+                              MASK_LOG_POOLING  | \
+                              MASK_LOG_RELU     | \
+                              MASK_LOG_SIGMOID  | \
+                              MASK_LOG_SOFTMAX  | \
+                              MASK_LOG_TANH     | \
+                              MASK_LOG_LC       | \
+                              MASK_LOG_BN       | \
+                              MASK_LOG_CONCAT   | \
+                              0);                                          
+#include <stdio.h>      /* printf */
+#include <stdlib.h>     /* getenv */
+#endif //USE_PROFILING
+
 namespace mxnet {
 namespace op {
 
@@ -11,6 +46,30 @@ ACLBaseLayer<GPULayer,CPULayer>::ACLBaseLayer()
         arm_compute::CLScheduler::get().default_init();
         init_cl_env=false;
     }
+  const char* pBypassACL;
+  pBypassACL = getenv ("BYPASSACL");
+  if (pBypassACL){
+    unsigned int bacl;
+    sscanf(pBypassACL,"%i", &bacl);
+	if(bacl != bypass_acl_class_layer){
+	    bypass_acl_class_layer = bacl;
+        printf("BYPASSACL<%s>\n", pBypassACL);
+        printf("BYPASSACL: %x\n", bypass_acl_class_layer);
+	}
+  }
+#ifdef USE_PROFILING
+  const char* pLogACL;
+  pLogACL    = getenv("LOGACL");
+  if (pLogACL){
+    unsigned int alf;
+    sscanf(pLogACL,"%i", &alf);
+	if (alf != acl_log_flags){
+	    acl_log_flags = alf;
+        printf("LOGACL<%s>\n", pLogACL);
+        printf("LOGACL: %x\n", acl_log_flags);
+	}
+  }
+#endif //USE_PROFILING
 }
 template <typename GPULayer, typename CPULayer>
 void ACLBaseLayer<GPULayer,CPULayer>::gpu_run() {
@@ -25,16 +84,20 @@ template <typename GPULayer, typename CPULayer>
 ACLBaseLayer<GPULayer,CPULayer>::~ACLBaseLayer(){
 }
 template <typename GPULayer, typename CPULayer>
-template <typename ACLTensor> ACLTensor * ACLBaseLayer<GPULayer,CPULayer>::new_tensor(arm_compute::TensorShape shape,void *mem,bool share)
+template <typename ACLTensor> bool ACLBaseLayer<GPULayer,CPULayer>::new_tensor(ACLTensor *&tensor,arm_compute::TensorShape shape,void *mem,bool share)
 {
-    ACLTensor * tensor=new ACLTensor(share);
+    tensor=new ACLTensor(share);
     tensor->allocator()->init(arm_compute::TensorInfo(shape, arm_compute::Format::F32));
     tensor->bindmem(mem,share);
-    return tensor;
+    return true;
 }
 
 template <typename ACLTensor>
-void BaseTensor<ACLTensor>::commit(){
+void BaseTensor<ACLTensor>::commit(TensorType type){
+    settensortype(type);
+#ifdef USE_PROFILING
+            logtime_util log_time(ACL_ALLOCATE_INFO);
+#endif //USE_PROFILING
     if (!share_&&mem_) {
         if (!allocate_){ 
             ACLTensor::allocator()->allocate(); 
@@ -50,6 +113,9 @@ void BaseTensor<ACLTensor>::commit(){
 template <typename ACLTensor>
 int BaseTensor<ACLTensor>::tensor_copy(void * mem,bool toTensor)
 {
+#ifdef USE_PROFILING
+    logtime_util log_time(ACL_COPY_INFO);
+#endif //USE_PROFILING
     arm_compute::Window window;
     ACLTensor* tensor=this;
     window.use_tensor_dimensions(tensor->info(), /* first_dimension =*/arm_compute::Window::DimY); // Iterate through the rows (not each element)
@@ -98,11 +164,11 @@ template <typename GPULayer, typename CPULayer>
 void ACLBaseLayer<GPULayer,CPULayer>::acl_run(void *input_data, void *output_data,bool gpu)
 {
     if (gpu) {
-        tensor_mem(this->gpu().input,input_data);
+        if(input_data)tensor_mem(this->gpu().input,input_data);
         gpu_run();
         tensor_mem(output_data,this->gpu().output);
     }else{
-        tensor_mem(this->cpu().input,input_data);
+        if(input_data)tensor_mem(this->cpu().input,input_data);
         cpu_run();
         tensor_mem(output_data,this->cpu().output);
     }
@@ -175,6 +241,18 @@ INSTANTIATE_ACLBASECLASS(arm_compute::CLFullyConnectedLayer,arm_compute::NEFully
 INSTANTIATE_ACLBASECLASS(arm_compute::CLConvolutionLayer,arm_compute::NEConvolutionLayer); 
   INSTANTIATE_ACLBASE_FUNCTION(arm_compute::CLConvolutionLayer,arm_compute::NEConvolutionLayer,GPUTensor);
   INSTANTIATE_ACLBASE_FUNCTION(arm_compute::CLConvolutionLayer,arm_compute::NEConvolutionLayer,CPUTensor);
+INSTANTIATE_ACLBASECLASS(arm_compute::CLConvolutionLayer,arm_compute::NEDirectConvolutionLayer); 
+  INSTANTIATE_ACLBASE_FUNCTION(arm_compute::CLConvolutionLayer,arm_compute::NEDirectConvolutionLayer,GPUTensor);
+  INSTANTIATE_ACLBASE_FUNCTION(arm_compute::CLConvolutionLayer,arm_compute::NEDirectConvolutionLayer,CPUTensor);
+INSTANTIATE_ACLBASECLASS(arm_compute::CLBatchNormalizationLayer,arm_compute::NEBatchNormalizationLayer); 
+  INSTANTIATE_ACLBASE_FUNCTION(arm_compute::CLBatchNormalizationLayer,arm_compute::NEBatchNormalizationLayer,GPUTensor);
+  INSTANTIATE_ACLBASE_FUNCTION(arm_compute::CLBatchNormalizationLayer,arm_compute::NEBatchNormalizationLayer,CPUTensor);
+INSTANTIATE_ACLBASECLASS(arm_compute::CLLocallyConnectedLayer,arm_compute::NELocallyConnectedLayer); 
+  INSTANTIATE_ACLBASE_FUNCTION(arm_compute::CLLocallyConnectedLayer,arm_compute::NELocallyConnectedLayer,GPUTensor);
+  INSTANTIATE_ACLBASE_FUNCTION(arm_compute::CLLocallyConnectedLayer,arm_compute::NELocallyConnectedLayer,CPUTensor);
+INSTANTIATE_ACLBASECLASS(arm_compute::CLDepthConcatenate,arm_compute::NEDepthConcatenate); 
+  INSTANTIATE_ACLBASE_FUNCTION(arm_compute::CLDepthConcatenate,arm_compute::NEDepthConcatenate,GPUTensor);
+  INSTANTIATE_ACLBASE_FUNCTION(arm_compute::CLDepthConcatenate,arm_compute::NEDepthConcatenate,CPUTensor);
 
 }  // namespace op
 }  // namespace mxnet

@@ -11,11 +11,19 @@
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_concat-inl.h"
 #endif  // MXNET_USE_MKL2017
+#if USE_ACL == 1
+#include "./acl/acl_concat-inl.h"
+#endif  // USE_ACL
 
 namespace mxnet {
 namespace op {
+#if USE_ACL == 1
+template<>
+Operator* CreateOp<cpu>(ConcatParam param, int dtype, Context & ctx) {
+#else
 template<>
 Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
+#endif
   Operator *op = NULL;
 #if MXNET_USE_MKL2017 == 1
   if ((1 == param.dim) &&
@@ -32,6 +40,10 @@ Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
   if (enableMKLWarnGenerated())
     LOG(INFO) << MKLConcatOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
+#if USE_ACL == 1
+  if (dtype==mshadow::kFloat32)
+      return new ACLConcatOp<cpu, float>(ctx,param);
+#endif
   MSHADOW_TYPE_SWITCH(dtype, DType, {
     op = new ConcatOp<cpu, DType>(param);
   });
@@ -40,7 +52,11 @@ Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
 
 Operator* ConcatProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                        std::vector<int> *in_type) const {
+#if USE_ACL == 1
+  DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0),ctx);
+#else
   DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
+#endif
 }
 
 DMLC_REGISTER_PARAMETER(ConcatParam);

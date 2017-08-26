@@ -12,6 +12,9 @@
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_batch_norm-inl.h"
 #endif  // MXNET_USE_MKL2017
+#if USE_ACL == 1
+#include "./acl/acl_batch_norm-inl.h"
+#endif  // USE_ACL
 
 /*! \brief inverse standard deviation <-> variance */
 #define VARIANCE_TO_INVSTD(__var$,    __eps$)   (1.0/sqrt((__var$) + DType(__eps$)))
@@ -229,6 +232,50 @@ static inline void ComputeVariance(const DeviceTensor3<DType> &tensor,
 
 }  // namespace batchnorm
 
+#if USE_ACL == 1
+template <typename xpu, typename DType>
+void ACLBatchNormOp<xpu, DType>::PrepareHelpSetupACLLayer(const OpContext &ctx,
+                                                 const std::vector<TBlob> &in_data,
+                                                 const std::vector<OpReqType> &req,
+                                                 const std::vector<TBlob> &out_data,
+                                                 const std::vector<TBlob> &aux_states) {
+  // Input
+  batchnorm::DeviceTensor3<DType> inputData(in_data[batchnorm::kData], 1);
+  const TBlob &weights         = in_data[batchnorm::kGamma];
+  const TBlob &bias            = in_data[batchnorm::kBeta];
+
+  // Output
+  batchnorm::DeviceTensor3<DType> outputData(out_data[batchnorm::kOut], 1);
+  const TBlob &meanVector      = out_data[batchnorm::kMean];
+  const TBlob &varianceVector  = out_data[batchnorm::kVar];
+
+  // Aux (Moving)
+  const TBlob &runningMean     = aux_states[batchnorm::kMovingMean];
+  const TBlob &runningVariance = aux_states[batchnorm::kMovingVar];
+
+  DType *mean = meanVector.dptr<DType>();
+  DType  *var = varianceVector.dptr<DType>();
+
+  if (!param_.use_global_stats) {
+    const DType *rm = runningMean.dptr<DType>();
+    const DType *rv = runningVariance.dptr<DType>();
+
+    for (size_t i = 0, n = inputData.shape_[1]; i < n; ++i) {
+      mean[i] = rm[i];
+      var[i] = rv[i];
+    }
+  }
+
+  // compute output
+  DType        *w = weights.dptr<DType>();
+
+    if (param_.fix_gamma) {
+        for (size_t i =0, n = weights.Size(); i < n; ++i) {
+          w[i] = DType(1);
+        }
+    }
+}
+#endif
 /*! \brief Forward CPU */
 template <typename xpu, typename DType, typename AccReal>
 void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
@@ -432,8 +479,13 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
 }
 
 
+#if USE_ACL == 1
+template<>
+Operator *CreateOp<cpu>(const BatchNormParam& param, const int dtype, const TShape& shape, Context & ctx) {
+#else
 template<>
 Operator *CreateOp<cpu>(const BatchNormParam& param, const int dtype, const TShape& shape) {
+#endif
   Operator *op = nullptr;
 #if MXNET_USE_MKL2017 == 1
   if (shape.ndim() == 4) {
@@ -456,6 +508,10 @@ Operator *CreateOp<cpu>(const BatchNormParam& param, const int dtype, const TSha
 #else
 #define BATCHNORM_LOG_MKL_INFO() ((void)0)
 #endif
+#if USE_ACL == 1
+  if (dtype==mshadow::kFloat32)
+      return new ACLBatchNormOp<cpu, float>(ctx,param);
+#endif
   if (!op) {
     MSHADOW_REAL_TYPE_SWITCH_EX(dtype,
                                 DType,
@@ -474,7 +530,11 @@ Operator *BatchNormProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_s
   CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   CHECK_GE(in_shape->size(), 1U);
+#if USE_ACL == 1
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_shape)[0],ctx);
+#else
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_shape)[0]);
+#endif
 }
 
 DMLC_REGISTER_PARAMETER(BatchNormParam);

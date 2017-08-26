@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2016 by Contributors
- * \file acl_convolution-inl.h
+ * \file acl_pooling-inl.h
  * \brief
  * \author Joey
 */
@@ -68,12 +68,18 @@ class ACLPoolingOp : public PoolingOp<xpu, DType>,public ACLBaseLayer<arm_comput
          pool_info=new arm_compute::PoolingLayerInfo(arm_compute::PoolingType::AVG, this->kernel_w_, arm_compute::PadStrideInfo(this->stride_w_,this->stride_h_,this->pad_w_,this->pad_h_,arm_compute::DimensionRoundingType::CEIL));
 
       if (is_gpu_) {
-          this->gpu().input=new_tensor<GPUTensor>(in_shape,(void*)input_data);
-          this->gpu().output=new_tensor<GPUTensor>(out_shape,(void*)output_data);
+          new_tensor(this->gpu().input,in_shape,(void*)input_data);
+          new_tensor(this->gpu().output,out_shape,(void*)output_data);
+#ifdef USE_PROFILING
+        logtime_util log_time(ACL_CONFIG_INFO);
+#endif //USE_PROFILING
           this->gpu().layer->configure(this->gpu().input,this->gpu().output,*pool_info);
       }else{
-          this->cpu().input=new_tensor<CPUTensor>(in_shape,(void*)input_data);
-          this->cpu().output=new_tensor<CPUTensor>(out_shape,(void*)output_data);
+          new_tensor(this->cpu().input,in_shape,(void*)input_data);
+          new_tensor(this->cpu().output,out_shape,(void*)output_data);
+#ifdef USE_PROFILING
+        logtime_util log_time(ACL_CONFIG_INFO);
+#endif //USE_PROFILING
           this->cpu().layer->configure(this->cpu().input,this->cpu().output,*pool_info);
       }
       delete pool_info;
@@ -85,6 +91,7 @@ class ACLPoolingOp : public PoolingOp<xpu, DType>,public ACLBaseLayer<arm_comput
     this->param_ = p;
     this->ctx_ = ctx;
     this->is_gpu_ = ctx_.arm_gpu_mode();
+    this->force_bypass_acl_path_= bypass_acl_class_layer & FLAGS_ENABLE_ACL_POOLING;
   }
 
  public:
@@ -92,8 +99,10 @@ class ACLPoolingOp : public PoolingOp<xpu, DType>,public ACLBaseLayer<arm_comput
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
-
-      if (this->force_bypass_acl_path_){
+#ifdef USE_PROFILING
+  logtime_util log_time(ACL_POOLING_INFO);
+#endif //USE_PROFILING
+      if (this->force_bypass_acl_path_||this->param_.global_pool){
           PoolingOp<xpu, DType>::Forward(ctx,in_data,req,out_data,aux_args);
           return;
       }

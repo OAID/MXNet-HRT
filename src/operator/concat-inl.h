@@ -110,8 +110,13 @@ class ConcatOp : public Operator {
   int dimension_;
 };  // class ConcatOp
 
+#if USE_ACL == 1
+template<typename xpu>
+Operator *CreateOp(ConcatParam param, int dtype, Context & ctx);
+#else
 template<typename xpu>
 Operator *CreateOp(ConcatParam param, int dtype);
+#endif
 
 #if DMLC_USE_CXX11
 class ConcatProp : public OperatorProperty {

@@ -186,8 +186,13 @@ class BatchNormOp : public Operator {
   BatchNormParam param_;
 };  // class BatchNormOp
 
+#if USE_ACL == 1
+template<typename xpu>
+Operator *CreateOp(const BatchNormParam& param, const int dtype, const TShape& shape, Context & ctx);
+#else
 template<typename xpu>
 Operator *CreateOp(const BatchNormParam& param, const int dtype, const TShape& shape);
+#endif
 
 #if DMLC_USE_CXX11
 class BatchNormProp : public OperatorProperty {

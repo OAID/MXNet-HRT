@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2016 by Contributors
- * \file acl_FULLY_CONNECTED-inl.h
+ * \file acl_fully_connected-inl.h
  * \brief
  * \author Joey
 */
@@ -73,31 +73,37 @@ class ACLFullyConnectedOp : public FullyConnectedOp<xpu, DType>,ACLBaseLayer<arm
       this->force_bypass_acl_path_ = false; 
       if (is_gpu_) {
           if (transpose) {
-              this->gpu().weights=new_tensor<GPUTensor>(weights_shape_t,(void*)weithts_data);
+              new_tensor(this->gpu().weights,weights_shape_t,(void*)weithts_data);
           }else{
-              this->gpu().weights=new_tensor<GPUTensor>(weights_shape,(void*)weithts_data);
+              new_tensor(this->gpu().weights,weights_shape,(void*)weithts_data);
           }
           tensor_mem(this->gpu().weights,(void*)weithts_data);
           if (!param_.no_bias) {
-              this->gpu().biases=new_tensor<GPUTensor>(biases_shape,(void*)bias_data);
+              new_tensor(this->gpu().biases,biases_shape,(void*)bias_data);
               tensor_mem(this->gpu().biases,(void*)bias_data);
           }
-          this->gpu().input=new_tensor<GPUTensor>(input_shape,(void*)input_data);
-          this->gpu().output=new_tensor<GPUTensor>(output_shape,(void*)output_data);
+          new_tensor(this->gpu().input,input_shape,(void*)input_data);
+          new_tensor(this->gpu().output,output_shape,(void*)output_data);
+#ifdef USE_PROFILING
+        logtime_util log_time(ACL_CONFIG_INFO);
+#endif //USE_PROFILING
           this->gpu().layer->configure(this->gpu().input,this->gpu().weights,this->gpu().biases,this->gpu().output,transpose);
       }else{
           if (transpose) {
-              this->cpu().weights=new_tensor<CPUTensor>(weights_shape_t,(void*)weithts_data);
+              new_tensor(this->cpu().weights,weights_shape_t,(void*)weithts_data);
           }else{
-              this->cpu().weights=new_tensor<CPUTensor>(weights_shape,(void*)weithts_data);
+              new_tensor(this->cpu().weights,weights_shape,(void*)weithts_data);
           }
           tensor_mem(this->cpu().weights,(void*)weithts_data);
           if (!param_.no_bias) {
-              this->cpu().biases=new_tensor<CPUTensor>(biases_shape,(void*)bias_data);
+              new_tensor(this->cpu().biases,biases_shape,(void*)bias_data);
               tensor_mem(this->cpu().biases,(void*)bias_data);
           }
-          this->cpu().input=new_tensor<CPUTensor>(input_shape,(void*)input_data);
-          this->cpu().output=new_tensor<CPUTensor>(output_shape,(void*)output_data);
+          new_tensor(this->cpu().input,input_shape,(void*)input_data);
+          new_tensor(this->cpu().output,output_shape,(void*)output_data);
+#ifdef USE_PROFILING
+        logtime_util log_time(ACL_CONFIG_INFO);
+#endif //USE_PROFILING
           this->cpu().layer->configure(this->cpu().input,this->cpu().weights,this->cpu().biases,this->cpu().output,transpose);
 
       }
@@ -109,6 +115,7 @@ class ACLFullyConnectedOp : public FullyConnectedOp<xpu, DType>,ACLBaseLayer<arm
     this->param_ = p;
     this->ctx_ = ctx;
     this->is_gpu_ = ctx_.arm_gpu_mode();
+    this->force_bypass_acl_path_= bypass_acl_class_layer & FLAGS_ENABLE_ACL_FC;
   }
 
  public:
@@ -116,6 +123,9 @@ class ACLFullyConnectedOp : public FullyConnectedOp<xpu, DType>,ACLBaseLayer<arm
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
+#ifdef USE_PROFILING
+  logtime_util log_time(ACL_FC_INFO);
+#endif //USE_PROFILING
       if (this->force_bypass_acl_path_){
          FullyConnectedOp<xpu, DType>::Forward(ctx,in_data,req,out_data,aux_args);
          return;

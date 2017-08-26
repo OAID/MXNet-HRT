@@ -22,8 +22,8 @@
 namespace mxnet {
 namespace op {
 
-template<typename xpu, typename DType>
-class ACLConvolutionOp : public ConvolutionOp<xpu, DType>,public ACLBaseLayer<arm_compute::CLConvolutionLayer,arm_compute::NEConvolutionLayer> {
+template<typename xpu, typename DType,typename GPUConvLayer,typename CPUConvLayer>
+class ACLConvolutionOp : public ConvolutionOp<xpu, DType>,public ACLBaseLayer<GPUConvLayer,CPUConvLayer> {
  private:
   ConvolutionParam param_;
   Context ctx_;
@@ -37,14 +37,14 @@ class ACLConvolutionOp : public ConvolutionOp<xpu, DType>,public ACLBaseLayer<ar
       const TShape& ishape=in_data[conv::kData].shape_;
       const TShape& oshape=out_data[conv::kOut].shape_;
       arm_compute::TensorShape input_shape((unsigned int)ishape[3],(unsigned int)ishape[2], (unsigned int)ishape[1],(unsigned int)ishape[0]); //wxhxchxnum
-      checkreshape(input_shape,is_gpu_);
+      ACLBaseLayer<GPUConvLayer,CPUConvLayer>::checkreshape(input_shape,is_gpu_);
       if (!this->init_layer_) return;
       this->init_layer_=false;
     // Initialize ACL.
       if (is_gpu_) {
-          new_gpulayer();
+          ACLBaseLayer<GPUConvLayer,CPUConvLayer>::new_gpulayer();
       }else{
-          new_cpulayer();
+          ACLBaseLayer<GPUConvLayer,CPUConvLayer>::new_cpulayer();
       }
       this->force_bypass_acl_path_=false;
 
@@ -62,7 +62,12 @@ class ACLConvolutionOp : public ConvolutionOp<xpu, DType>,public ACLBaseLayer<ar
         dilate[1]=param_.dilate[0];dilate[0]=param_.dilate[1];
         pad[1]=param_.pad[0];pad[0]=param_.pad[1];
         kernel_shape[1]=param_.kernel[0];kernel_shape[0]=param_.kernel[1];
-      } 
+      } else{
+          stride[1]=stride[0]=0;
+          dilate[1]=dilate[0]=0;
+          pad[1]=pad[0]=0;
+          kernel_shape[1]=kernel_shape[0]=0;
+      }
 
       int stride_x =stride[1];
       int stride_y =stride[0];
@@ -79,39 +84,45 @@ class ACLConvolutionOp : public ConvolutionOp<xpu, DType>,public ACLBaseLayer<ar
       DType * input_data =in_data[conv::kData].dptr<DType>();
       DType * output_data =out_data[conv::kOut].dptr<DType>();
       DType * weithts_data=in_data[conv::kWeight].dptr<DType>();
-      DType * bias_data;
+      DType * bias_data=nullptr;
       if (!param_.no_bias) 
           bias_data=in_data[conv::kBias].dptr<DType>();
 
       if (is_gpu_) {
           //[kernel_x, kernel_y, IFM, OFM]
-          this->gpu().weights=new_tensor<GPUTensor>(weights_shape,(void*)weithts_data);
-          tensor_mem(this->gpu().weights,(void*)weithts_data);
+          ACLBaseLayer<GPUConvLayer,CPUConvLayer>::new_tensor(this->gpu().weights,weights_shape,(void*)weithts_data);
+          ACLBaseLayer<GPUConvLayer,CPUConvLayer>::tensor_mem(this->gpu().weights,(void*)weithts_data);
           //[OFM]
           if (!param_.no_bias) {
-              this->gpu().biases=new_tensor<GPUTensor>(biases_shape,(void*)bias_data);
-              tensor_mem(this->gpu().biases,(void*)bias_data);
+              ACLBaseLayer<GPUConvLayer,CPUConvLayer>::new_tensor(this->gpu().biases,biases_shape,(void*)bias_data);
+              ACLBaseLayer<GPUConvLayer,CPUConvLayer>::tensor_mem(this->gpu().biases,(void*)bias_data);
           }
 
           //[width, height, IFM]
-          this->gpu().input=new_tensor<GPUTensor>(input_shape,(void*)input_data);
+          ACLBaseLayer<GPUConvLayer,CPUConvLayer>::new_tensor(this->gpu().input,input_shape,(void*)input_data);
           //[width, height, OFM]
-          this->gpu().output=new_tensor<GPUTensor>(output_shape,(void*)output_data);
+          ACLBaseLayer<GPUConvLayer,CPUConvLayer>::new_tensor(this->gpu().output,output_shape,(void*)output_data);
+#ifdef USE_PROFILING
+          logtime_util log_time(ACL_CONFIG_INFO);
+#endif //USE_PROFILING
           this->gpu().layer->configure(this->gpu().input,this->gpu().weights,this->gpu().biases,this->gpu().output,conv_info);
       }else{
           //[kernel_x, kernel_y, IFM, OFM]
-          this->cpu().weights=new_tensor<CPUTensor>(weights_shape,(void*)weithts_data);
-          tensor_mem(this->cpu().weights,(void*)weithts_data);
+          ACLBaseLayer<GPUConvLayer,CPUConvLayer>::new_tensor(this->cpu().weights,weights_shape,(void*)weithts_data);
+          ACLBaseLayer<GPUConvLayer,CPUConvLayer>::tensor_mem(this->cpu().weights,(void*)weithts_data);
           //[OFM]
           if (!param_.no_bias) {
-              this->cpu().biases=new_tensor<CPUTensor>(biases_shape,(void*)bias_data);
-              tensor_mem(this->cpu().biases,(void*)bias_data);
+              ACLBaseLayer<GPUConvLayer,CPUConvLayer>::new_tensor(this->cpu().biases,biases_shape,(void*)bias_data);
+              ACLBaseLayer<GPUConvLayer,CPUConvLayer>::tensor_mem(this->cpu().biases,(void*)bias_data);
           }
 
           //[width, height, IFM]
-          this->cpu().input=new_tensor<CPUTensor>(input_shape,(void*)input_data);
+          ACLBaseLayer<GPUConvLayer,CPUConvLayer>::new_tensor(this->cpu().input,input_shape,(void*)input_data);
           //[width, height, OFM]
-          this->cpu().output=new_tensor<CPUTensor>(output_shape,(void*)output_data);
+          ACLBaseLayer<GPUConvLayer,CPUConvLayer>::new_tensor(this->cpu().output,output_shape,(void*)output_data);
+#ifdef USE_PROFILING
+          logtime_util log_time(ACL_CONFIG_INFO);
+#endif //USE_PROFILING
           this->cpu().layer->configure(this->cpu().input,this->cpu().weights,this->cpu().biases,this->cpu().output,conv_info);
       }
   }
@@ -122,6 +133,7 @@ class ACLConvolutionOp : public ConvolutionOp<xpu, DType>,public ACLBaseLayer<ar
     this->param_ = p;
     this->ctx_ = ctx;
     this->is_gpu_ = ctx_.arm_gpu_mode();
+    this->force_bypass_acl_path_= bypass_acl_class_layer & FLAGS_ENABLE_ACL_CONV;
   }
 
  public:
@@ -129,6 +141,9 @@ class ACLConvolutionOp : public ConvolutionOp<xpu, DType>,public ACLBaseLayer<ar
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
+#ifdef USE_PROFILING
+    logtime_util log_time(ACL_CONV_INFO);
+#endif //USE_PROFILING
       if (this->force_bypass_acl_path_|| param_.num_group !=1){
          ConvolutionOp<xpu, DType>::Forward(ctx,in_data,req,out_data,aux_args);
          return;
@@ -154,7 +169,7 @@ class ACLConvolutionOp : public ConvolutionOp<xpu, DType>,public ACLBaseLayer<ar
       DType * input_data =in_data[conv::kData].dptr<DType>();
       DType * output_data =out_data[conv::kOut].dptr<DType>();
       SetupACLLayer(ctx,in_data,req,out_data,aux_args);
-      acl_run((void*)input_data,(void*)output_data,is_gpu_);
+      ACLBaseLayer<GPUConvLayer,CPUConvLayer>::acl_run((void*)input_data,(void*)output_data,is_gpu_);
   }
 };  // class ACLConvolutionOp
 }  // namespace op
