@@ -67,6 +67,9 @@ ifeq ($(USE_ACL), 1)
         LDFLAGS += $(foreach librarydir,$(ACL_LIBS_DIR),-L$(librarydir))
 	LDFLAGS += $(foreach library,$(ACL_LIBS),-l$(library))
 endif
+ifeq ($(USE_PROFILING), 1)
+       CFLAGS += -DUSE_PROFILING
+endif
 
 # CFLAGS for profiler
 ifeq ($(USE_PROFILER), 1)
