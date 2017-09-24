@@ -1,12 +1,4 @@
-# MxnetOnACL
-[![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
-
-MxnetOnACL is a project to use ARM Compute Library (NEON+GPU) to speed up Mxnet and provide utilities to debug, profile and tune application performance.
-
-Check out the documents for the details like
-- [release notes](https://github.com/OAID/mxnetOnACL/tree/master/acl_openailab/README.md)
 #
-
 <img src=https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo-m/mxnet2.png width=135/> *for Deep Learning*
 =====
 
