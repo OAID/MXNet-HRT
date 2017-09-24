@@ -3,13 +3,13 @@
 
 MXNet is a project that is maintained by **OPEN** AI LAB, it uses Arm Compute Library (NEON+GPU) to speed up [MXNet](https://github.com/apache/incubator-mxnet) and provide utilities to debug, profile and tune application performance. 
 
-The release version is 0.3.0, is based on [Rockchip RK3399](http://www.rock-chips.com/plus/3399.html) Platform, target OS is Ubuntu 16.04. Can download the source code from [OAID/CaffeOnACL](https://github.com/OAID/MXNetOnACL)
+The release version is 0.3.0, is based on [Rockchip RK3399](http://www.rock-chips.com/plus/3399.html) Platform, target OS is Ubuntu 16.04. Can download the source code from [OAID/MXNet](https://github.com/OAID/MXNetOnACL)
 
 * The ARM Computer Vision and Machine Learning library is a set of functions optimised for both ARM CPUs and GPUs using SIMD technologies. See also [Arm Compute Library](https://github.com/ARM-software/ComputeLibrary).
 * Caffe is a fast open framework for deep learning. See also [MXNet](https://github.com/apache/incubator-mxnet).
 
 ### Documents
-* [Installation instructions](https://github.com/OAID/MXNetOnACL/master/acl_openailab/installation.md)
+* [Installation instructions](https://github.com/OAID/MXNetOnACL/blob/master/acl_openailab/installation.md)
 * [User Manuals PDF](https://github.com/OAID/MXNetOnACL/blob/master/acl_openailab/user_manual.pdf)
 * [Performance Report PDF](https://github.com/OAID/MXNetOnACL/blob/master/acl_openailab/performance_report.pdf)
 
