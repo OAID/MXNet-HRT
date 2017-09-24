@@ -1,84 +1,57 @@
-#
-<img src=https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo-m/mxnet2.png width=135/> *for Deep Learning*
-=====
-
-[![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
-[![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.io/)
+# MXNetOnACL
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
 
-![banner](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/banner.png)
+MXNetOnACL is a project that is maintained by **OPEN** AI LAB, it uses Arm Compute Library (NEON+GPU) to speed up [MXNet](https://mxnet.incubator.apache.org/) and provide utilities to debug, profile and tune application performance. 
 
-MXNet is a deep learning framework designed for both *efficiency* and *flexibility*.
-It allows you to ***mix*** [symbolic and imperative programming](http://mxnet.io/architecture/index.html#deep-learning-system-design-concepts)
-to ***maximize*** efficiency and productivity.
-At its core, MXNet contains a dynamic dependency scheduler that automatically parallelizes both symbolic and imperative operations on the fly.
-A graph optimization layer on top of that makes symbolic execution fast and memory efficient.
-MXNet is portable and lightweight, scaling effectively to multiple GPUs and multiple machines.
+The release version is 0.2.0, is based on [Rockchip RK3399](http://www.rock-chips.com/plus/3399.html) Platform, target OS is Ubuntu 16.04. Can download the source code from [OAID/MXNetOnACL](https://github.com/OAID/MXNetOnACL)
 
-MXNet is also more than a deep learning project. It is also a collection of
-[blue prints and guidelines](http://mxnet.io/architecture/index.html#deep-learning-system-design-concepts) for building
-deep learning systems, and interesting insights of DL systems for hackers.
+* The ARM Computer Vision and Machine Learning library is a set of functions optimised for both ARM CPUs and GPUs using SIMD technologies. See also [Arm Compute Library](https://github.com/ARM-software/ComputeLibrary).
+* MXNet is a Lightweight, Portable, Flexible Distributed/Mobile Deep Learning with Dynamic, Mutation-aware Dataflow Dep Scheduler; for Python, R, Julia, Scala, Go, Javascript and more. See also [MXNet](https://github.com/apache/incubator-mxnet).
 
-[![Join the chat at https://gitter.im/dmlc/mxnet](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/dmlc/mxnet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+### Documents
+* [Installation instructions](https://github.com/OAID/MXNetOnACL/blob/master/acl_openailab/installation.md)
+* [User Manuals PDF](https://github.com/OAID/MXNetOnACL/blob/master/acl_openailab/user_manual.pdf)
+* [Performance Report PDF](https://github.com/OAID/MXNetOnACL/blob/master/acl_openailab/performance_report.pdf)
 
-What's New
-----------
-* [Version 0.10.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.10.0) - MXNet 0.10.0 Release.
-* [Version 0.9.3 Release](./docs/architecture/release_note_0_9.md) - First 0.9 official release.
-* [Version 0.9.1 Release (NNVM refactor)](./docs/architecture/release_note_0_9.md) - NNVM branch is merged into master now. An official release will be made soon.
-* [Version 0.8.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.8.0)
-* [Updated Image Classification with new Pre-trained Models](./example/image-classification)
-* [Python Notebooks for How to Use MXNet](https://github.com/dmlc/mxnet-notebooks)
-* [MKLDNN for Faster CPU Performance](./MKL_README.md)
-* [MXNet Memory Monger, Training Deeper Nets with Sublinear Memory Cost](https://github.com/dmlc/mxnet-memonger)
-* [Tutorial for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)
-* [Embedding Torch layers and functions in MXNet](http://mxnet.io/how_to/torch.html)
-* [MXNet.js: Javascript Package for Deep Learning in Browser (without server)
-](https://github.com/dmlc/mxnet.js/)
-* [Design Note: Design Efficient Deep Learning Data Loading Module](http://mxnet.io/architecture/note_data_loading.html)
-* [MXNet on Mobile Device](http://mxnet.io/how_to/smart_device.html)
-* [Distributed Training](http://mxnet.io/how_to/multi_devices.html)
-* [Guide to Creating New Operators (Layers)](http://mxnet.io/how_to/new_op.html)
-* [Go binding for inference](https://github.com/songtianyi/go-mxnet-predictor)
-* [Amalgamation and Go Binding for Predictors](https://github.com/jdeng/gomxnet/) - Outdated
-* [Training Deep Net on 14 Million Images on A Single Machine](http://mxnet.io/tutorials/computer_vision/imagenet_full.html)
+### Arm Compute Library Compatibility Issues :
+There are some compatibility issues between ACL and Caffe Layers, we bypass it to Caffe's original layer class as the workaround solution for the below issues
 
-Contents
---------
-* [Documentation and Tutorials](http://mxnet.io/)
-* [Design Notes](http://mxnet.io/architecture/index.html)
-* [Code Examples](https://github.com/dmlc/mxnet/tree/master/example)
-* [Installation](http://mxnet.io/get_started/install.html)
-* [Pretrained Models](https://github.com/dmlc/mxnet-model-gallery)
-* [Contribute to MXNet](http://mxnet.io/community/contribute.html)
-* [Frequent Asked Questions](http://mxnet.io/how_to/faq.html)
+* Normalization in-channel issue
+* Tanh issue
+* Softmax supporting multi-dimension issue
+* Group issue
 
-Features
---------
-* Design notes providing useful insights that can re-used by other DL projects
-* Flexible configuration for arbitrary computation graph
-* Mix and match imperative and symbolic programming to maximize flexibility and efficiency
-* Lightweight, memory efficient and portable to smart devices
-* Scales up to multi GPUs and distributed setting with auto parallelism
-* Support for Python, R, Scala, C++ and Julia
-* Cloud-friendly and directly compatible with S3, HDFS, and Azure
+Performance need be fine turned in the future
 
-Ask Questions
--------------
-* Please use [mxnet/issues](https://github.com/dmlc/mxnet/issues) for how to use mxnet and reporting bugs
+# Release History
+The MXNet based version is [26b1cb9ad0bcde9206863a6f847455ff3ec3c266](https://github.com/apache/incubator-mxnet/tree/26b1cb9ad0bcde9206863a6f847455ff3ec3c266).
+## Version 0.2.0 - Aug 27, 2017
 
-License
--------
-© Contributors, 2015-2017. Licensed under an [Apache-2.0](https://github.com/dmlc/mxnet/blob/master/LICENSE) license.
+Support Arm Compute Library version 17.06 with 4 new layers added
 
-Reference Paper
----------------
+* Batch Normalization Layer
+* Direct convolution Layer
+* Concatenate layer
 
-Tianqi Chen, Mu Li, Yutian Li, Min Lin, Naiyan Wang, Minjie Wang, Tianjun Xiao,
-Bing Xu, Chiyuan Zhang, and Zheng Zhang.
-[MXNet: A Flexible and Efficient Machine Learning Library for Heterogeneous Distributed Systems](https://github.com/dmlc/web-data/raw/master/mxnet/paper/mxnet-learningsys.pdf).
-In Neural Information Processing Systems, Workshop on Machine Learning Systems, 2015
 
-History
--------
-MXNet emerged from a collaboration by the authors of [cxxnet](https://github.com/dmlc/cxxnet), [minerva](https://github.com/dmlc/minerva), and [purine2](https://github.com/purine/purine2). The project reflects what we have learned from the past projects. MXNet combines aspects of each of these projects to achieve flexibility, speed, and memory efficiency.
+## Version 0.1.0 - Jul 6, 2017 
+   
+  Initial version supports 10 Layers accelerated by Arm Compute Library version 17.05 : 
+
+* Convolution Layer
+* Pooling Layer
+* LRN Layer
+* ReLU Layer
+* Sigmoid Layer
+* Softmax Layer
+* TanH Layer
+* AbsVal Layer
+* BNLL Layer
+* InnerProduct Layer
+
+
+# Issue Report
+Encounter any issue, please report on [issue report](https://github.com/OAID/MXNetOnACL/issues). Issue report should contain the following information :
+
+*  The exact description of the steps that are needed to reproduce the issue 
+* The exact description of what happens and what you think is wrong 
