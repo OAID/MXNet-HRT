@@ -18,8 +18,9 @@ This User Quick Guide will help you get started to setup MXNetOnACL on RK3399 qu
 ## 2.2 Download source code
 	cd ~
 
-#### Download "ACL" (arm_compute : [v17.06](https://github.com/ARM-software/ComputeLibrary/tree/dbdab85d6e0f96d3361a9e30310367d89953466c)):
+#### Download "ACL" (arm_compute : [v17.09](https://github.com/ARM-software/ComputeLibrary/tree/bf8b01dfbfdca124673ade33c5eac8f3748d7abd)):
 	git clone https://github.com/ARM-software/ComputeLibrary.git
+	git checkout bf8b01d
 #### Download "MXNetOnACL" :
 	git clone --recursive https://github.com/OAID/MXNetOnACL.git
 
@@ -43,6 +44,7 @@ This User Quick Guide will help you get started to setup MXNetOnACL on RK3399 qu
 ## 3.4 To Configure The Libraries
 
 	sudo cp ~/ComputeLibrary/build/libArm_compute.so /usr/lib 
+	sudo cp ~/ComputeLibrary/build/libarm_compute_core.so /usr/lib
 	sudo cp ~/MXNetOnACL/lib/libmxnet.so  /usr/lib
 
 # 4. Run Caffenet Classification

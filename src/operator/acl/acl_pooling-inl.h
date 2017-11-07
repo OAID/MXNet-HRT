@@ -143,11 +143,9 @@ class ACLPoolingOp : public PoolingOp<xpu, DType>,public ACLBaseLayer<arm_comput
       }
       SetupACLLayer(ctx,in_data,req,out_data,aux_args);
       for (unsigned int n = 0; n < this->num_; ++n) {
-        for (unsigned int c = 0; c < this->channels_; ++c) {
             acl_run((void*)input_data,(void*)output_data,is_gpu_);
-            input_data += ishape.ProdShape(2, 3);
-            output_data += oshape.ProdShape(2, 3);
-        }
+            input_data += ishape.ProdShape(1, 3);
+            output_data += oshape.ProdShape(1, 3);
       }
   }
 };  // class ACLPoolingOp
