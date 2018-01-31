@@ -17,17 +17,16 @@
 #include <string>
 #include <utility>
 #include "../activation-inl.h"
-#include "acl_layer.h"
+#include "acl_operator.h"
 
 namespace mxnet {
 namespace op {
 
 template <typename xpu, typename ForwardOp, typename BackwardOp, typename DType>
-class ACLActivationOp : public ActivationOp<xpu, ForwardOp,BackwardOp,DType>,public ACLBaseLayer<arm_compute::CLActivationLayer,arm_compute::NEActivationLayer> {
+class ACLActivationOp : public ActivationOp<xpu, ForwardOp,BackwardOp,DType>,public ACLOperator {
  private:
   ActivationParam param_;
   Context ctx_;
-  bool is_gpu_;
 
   void SetupACLLayer(const OpContext &ctx, const std::vector<TBlob> &in_data,
                      const std::vector<OpReqType> &req,
@@ -37,19 +36,14 @@ class ACLActivationOp : public ActivationOp<xpu, ForwardOp,BackwardOp,DType>,pub
         const unsigned int count_ = out_data[activation::kOut].shape_.Size();
         arm_compute::TensorShape input_shape(count);
         arm_compute::TensorShape output_shape(count_);
-        checkreshape(input_shape,is_gpu_);
-        if (!this->init_layer_) return;
-        this->init_layer_=false;
-        // Initialize ACL.
-        if (is_gpu_) {
-            new_gpulayer();
-        }else{
-            new_cpulayer();
-        }
+        if (is_operator_init_done(input_shape)) return;
+        set_operator_init_done();
 
+        // Initialize ACL.
         this->force_bypass_acl_path_=false;
         arm_compute::ActivationLayerInfo::ActivationFunction type;
         switch(param_.act_type){
+            default:
             case activation::kReLU:
                 type=arm_compute::ActivationLayerInfo::ActivationFunction::RELU;
                 break;
@@ -64,36 +58,28 @@ class ACLActivationOp : public ActivationOp<xpu, ForwardOp,BackwardOp,DType>,pub
                 break;
         }
         arm_compute::ActivationLayerInfo act_info(type);
-        DType * input_data =in_data[activation::kData].dptr<DType>();
-        DType * output_data =out_data[activation::kOut].dptr<DType>();
-         
+     
         if(type== arm_compute::ActivationLayerInfo::ActivationFunction::TANH)
           act_info=arm_compute::ActivationLayerInfo(type,1.0,1.0);
 
-        if (is_gpu_) {
-            new_tensor(this->gpu().input,input_shape,(void*)input_data);
-            new_tensor(this->gpu().output,output_shape,(void*)output_data);
-#ifdef USE_PROFILING
-        logtime_util log_time(ACL_CONFIG_INFO);
-#endif //USE_PROFILING
-            this->gpu().layer->configure(this->gpu().input,this->gpu().output,act_info);
-        }else{
-            new_tensor(this->cpu().input,input_shape,(void*)input_data);
-            new_tensor(this->cpu().output,output_shape,(void*)output_data);
-#ifdef USE_PROFILING
-        logtime_util log_time(ACL_CONFIG_INFO);
-#endif //USE_PROFILING
-            this->cpu().layer->configure(this->cpu().input,this->cpu().output,act_info);
-        }
+      new_tensor(input(),input_shape,(void*)InputdataPtr<DType>(ACLOp_Ptr(this),in_data,activation::kData));
+      new_tensor(output(),output_shape,(void*)OutputdataPtr<DType>(ACLOp_Ptr(this),out_data,activation::kOut));
+      acl_configure(activation,this,act_info);
     }
+  bool Bypass_acl() {
+    bool bypass_acl=false;
+    if (this->force_bypass_acl_path_){
+        bypass_acl=true;
+    }
+    return bypass_acl;
+  }
 
 
  public:
   explicit ACLActivationOp(Context & ctx,ActivationParam p)
-      : ActivationOp<xpu, ForwardOp,BackwardOp,DType>() {
+      : ActivationOp<xpu, ForwardOp,BackwardOp,DType>() , ACLOperator(ctx.arm_gpu_mode()){
     this->param_ = p;
     this->ctx_ = ctx;
-    this->is_gpu_ = ctx_.arm_gpu_mode();
     switch(param_.act_type){
         case activation::kReLU:
             this->force_bypass_acl_path_= bypass_acl_class_layer & FLAGS_ENABLE_ACL_RELU;
@@ -132,14 +118,12 @@ class ACLActivationOp : public ActivationOp<xpu, ForwardOp,BackwardOp,DType>,pub
               break;
       }
 #endif //USE_PROFILING
-      if (this->force_bypass_acl_path_){
+      if (Bypass_acl()){
          ActivationOp<xpu, ForwardOp,BackwardOp,DType>::Forward(ctx,in_data,req,out_data,aux_args);
          return;
       }
-      DType * input_data =in_data[activation::kData].dptr<DType>();
-      DType * output_data =out_data[activation::kOut].dptr<DType>();
       SetupACLLayer(ctx,in_data,req,out_data,aux_args);
-      acl_run((void*)input_data,(void*)output_data,is_gpu_);
+      mxnet::op::acl_run<DType>(ACLOp_Ptr(this),in_data,out_data);
   }
 };  // class ACLActivationOp
 }  // namespace op

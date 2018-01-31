@@ -17,7 +17,7 @@ inline Engine* CreateEngine() {
   std::string stype = type;
 
   Engine *ret = nullptr;
-  #if MXNET_PREDICT_ONLY == 0
+  #if MXNET_PREDICT_ONLY == 0  && USE_ACL != 1
   if (stype == "NaiveEngine") {
     ret = CreateNaiveEngine();
   } else if (stype == "ThreadedEngine") {

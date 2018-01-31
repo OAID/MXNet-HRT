@@ -17,17 +17,16 @@
 #include <string>
 #include <utility>
 #include "../fully_connected-inl.h"
-#include "acl_layer.h"
+#include "acl_operator.h"
 
 namespace mxnet {
 namespace op {
 
 template<typename xpu, typename DType>
-class ACLFullyConnectedOp : public FullyConnectedOp<xpu, DType>,ACLBaseLayer<arm_compute::CLFullyConnectedLayer,arm_compute::NEFullyConnectedLayer> {
+class ACLFullyConnectedOp : public FullyConnectedOp<xpu, DType>,ACLOperator {
  private:
   FullyConnectedParam param_;
   Context ctx_;
-  bool is_gpu_;
   void SetupACLLayer(const OpContext &ctx, const std::vector<TBlob> &in_data,
                      const std::vector<OpReqType> &req,
                      const std::vector<TBlob> &out_data,
@@ -52,69 +51,38 @@ class ACLFullyConnectedOp : public FullyConnectedOp<xpu, DType>,ACLBaseLayer<arm
       arm_compute::TensorShape biases_shape(N);
       arm_compute::TensorShape input_shape(K, M);
       arm_compute::TensorShape output_shape(N, M);
-      checkreshape(input_shape,is_gpu_);
-      if (!this->init_layer_) return;
-      this->init_layer_=false;
+      if (is_operator_init_done(input_shape)) return;
+      set_operator_init_done();
+
       // Initialize ACL.
-      if (is_gpu_) {
-          new_gpulayer();
-      }else{
-          new_cpulayer();
-      }
-
-      DType * input_data =in_data[fullc::kData].dptr<DType>();
-      DType * output_data =out_data[fullc::kOut].dptr<DType>();
-      DType * weithts_data=in_data[fullc::kWeight].dptr<DType>();
-      DType * bias_data;
-      if (!param_.no_bias) 
-          bias_data=in_data[fullc::kBias].dptr<DType>();
-
       bool transpose = true;
       this->force_bypass_acl_path_ = false; 
-      if (is_gpu_) {
-          if (transpose) {
-              new_tensor(this->gpu().weights,weights_shape_t,(void*)weithts_data);
-          }else{
-              new_tensor(this->gpu().weights,weights_shape,(void*)weithts_data);
-          }
-          tensor_mem(this->gpu().weights,(void*)weithts_data);
-          if (!param_.no_bias) {
-              new_tensor(this->gpu().biases,biases_shape,(void*)bias_data);
-              tensor_mem(this->gpu().biases,(void*)bias_data);
-          }
-          new_tensor(this->gpu().input,input_shape,(void*)input_data);
-          new_tensor(this->gpu().output,output_shape,(void*)output_data);
-#ifdef USE_PROFILING
-        logtime_util log_time(ACL_CONFIG_INFO);
-#endif //USE_PROFILING
-          this->gpu().layer->configure(this->gpu().input,this->gpu().weights,this->gpu().biases,this->gpu().output,transpose);
-      }else{
-          if (transpose) {
-              new_tensor(this->cpu().weights,weights_shape_t,(void*)weithts_data);
-          }else{
-              new_tensor(this->cpu().weights,weights_shape,(void*)weithts_data);
-          }
-          tensor_mem(this->cpu().weights,(void*)weithts_data);
-          if (!param_.no_bias) {
-              new_tensor(this->cpu().biases,biases_shape,(void*)bias_data);
-              tensor_mem(this->cpu().biases,(void*)bias_data);
-          }
-          new_tensor(this->cpu().input,input_shape,(void*)input_data);
-          new_tensor(this->cpu().output,output_shape,(void*)output_data);
-#ifdef USE_PROFILING
-        logtime_util log_time(ACL_CONFIG_INFO);
-#endif //USE_PROFILING
-          this->cpu().layer->configure(this->cpu().input,this->cpu().weights,this->cpu().biases,this->cpu().output,transpose);
 
+      if (transpose) {
+          new_tensor(weights(),weights_shape_t,GetDataPtr<DType>(ACLOp_Ptr(this),in_data,fullc::kWeight));
+      }else{
+          new_tensor(weights(),weights_shape,GetDataPtr<DType>(ACLOp_Ptr(this),in_data,fullc::kWeight));
       }
+      if (!param_.no_bias) {
+          new_tensor(biases(),biases_shape,GetDataPtr<DType>(ACLOp_Ptr(this),in_data,fullc::kBias));
+      }
+      new_tensor(input(),input_shape,InputdataPtr<DType>(ACLOp_Ptr(this),in_data,fullc::kData));
+      new_tensor(output(),output_shape,OutputdataPtr<DType>(ACLOp_Ptr(this),out_data,fullc::kOut));
+      acl_configure(fc,this,transpose);
+  }
+  bool Bypass_acl() {
+    bool bypass_acl=false;
+    if (this->force_bypass_acl_path_){
+        bypass_acl=true;
+    }
+    return bypass_acl;
   }
 
  public:
   explicit ACLFullyConnectedOp(Context & ctx,FullyConnectedParam p)
-      : FullyConnectedOp<xpu, DType>(p) {
+      : FullyConnectedOp<xpu, DType>(p) , ACLOperator(ctx.arm_gpu_mode()){
     this->param_ = p;
     this->ctx_ = ctx;
-    this->is_gpu_ = ctx_.arm_gpu_mode();
     this->force_bypass_acl_path_= bypass_acl_class_layer & FLAGS_ENABLE_ACL_FC;
   }
 
@@ -126,15 +94,13 @@ class ACLFullyConnectedOp : public FullyConnectedOp<xpu, DType>,ACLBaseLayer<arm
 #ifdef USE_PROFILING
   logtime_util log_time(ACL_FC_INFO);
 #endif //USE_PROFILING
-      if (this->force_bypass_acl_path_){
+      if (Bypass_acl()){
          FullyConnectedOp<xpu, DType>::Forward(ctx,in_data,req,out_data,aux_args);
          return;
       }
 
-      DType * input_data =in_data[fullc::kData].dptr<DType>();
-      DType * output_data =out_data[fullc::kOut].dptr<DType>();
       SetupACLLayer(ctx,in_data,req,out_data,aux_args);
-      acl_run((void*)input_data,(void*)output_data,is_gpu_);
+      mxnet::op::acl_run<DType>(ACLOp_Ptr(this),in_data,out_data);
   }
 };  // class ACLFullyConnectedOp
 }  // namespace op

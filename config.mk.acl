@@ -2,12 +2,29 @@ USE_SSE=0
 USE_CUDA=0
 CXX=aarch64-linux-gnu-g++
 USE_ACL :=1
-ACL_ROOT :=/home/firefly/ComputeLibrary
+USE_PROFILING:=1
+USE_OPENCL:=1
+
+AIDDIR=/usr/local/AID
+
+export PKG_CONFIG_PATH=$(AIDDIR)/pkgconfig
+
+ACL_ROOT :=$(AIDDIR)/ComputeLibrary
 ACL_INCS :=$(ACL_ROOT)/include 
 ACL_INCS +=$(ACL_ROOT)
-ACL_LIBS_DIR :=$(ACL_ROOT)/build
-ACL_LIBS_DIR +=$(ACL_ROOT)/build/arm_compute
-ACL_LIBS :=arm_compute arm_compute_core OpenCL
+ACL_LIBS_DIR :=$(ACL_ROOT)
+ACL_LIBS_DIR +=$(ACL_ROOT)/arm_compute
+ACL_LIBS :=OpenCL
 USE_BLAS=openblas
 ADD_CFLAGS += -I/usr/include/openblas
-ADD_LDFLAGS += -L../libs -lopencv_core -lopencv_imgproc 
+ADD_LDFLAGS += `pkg-config --libs opencv` `pkg-config --libs computelibrary`
+
+ifeq ($(wildcard $(AIDDIR)),)
+ACL_ROOT :=$(shell pwd)/../ComputeLibrary
+ACL_INCS :=$(ACL_ROOT)/include
+ACL_INCS +=$(ACL_ROOT)
+ACL_LIBS_DIR :=$(ACL_ROOT)/build
+ACL_LIBS :=arm_compute arm_compute_core OpenCL
+ADD_LDFLAGS := -L../libs -lopencv_core -lopencv_imgproc 
+endif
+

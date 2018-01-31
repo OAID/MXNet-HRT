@@ -162,25 +162,31 @@ void PrintOutputResult(const std::vector<float>& data, const std::vector<std::st
 }
 
 int main(int argc, char* argv[]) {
-    if (argc != 6) {
-      std::cerr << "Usage: " << argv[0]
+    if (argc != 7) {
+      std::cerr << "Usage: "<< std::endl 
+				<< argv[0]
+				<< " [gpu|cpu]"
                 << " symbol.json model.params"
                 << " mean.nd  synset.txt img.jpg" << std::endl;
       return 1;
     }
 
     // Models path for your model, you have to modify it
-    std::string json_file = argv[1];
-    std::string param_file = argv[2];
-    std::string nd_file = argv[3];
-    std::string synset_file = argv[4];
-    std::string test_file = argv[5];
+	std::string type_str = argv[1];
+    std::string json_file = argv[2];
+    std::string param_file = argv[3];
+    std::string nd_file = argv[4];
+    std::string synset_file = argv[5];
+    std::string test_file = argv[6];
 
     BufferFile json_data(json_file);
     BufferFile param_data(param_file);
 
     // Parameters
     int dev_type = 1;  // 1: cpu, 2: gpu
+	if(type_str.compare("gpu") ==0 || type_str.compare("GPU") == 0)
+		dev_type = 2;
+	
     int dev_id = 0;  // arbitrary.
     mx_uint num_input_nodes = 1;  // 1 for feedforward
     const char* input_key[1] = {"data"};

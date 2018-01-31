@@ -17,17 +17,16 @@
 #include <string>
 #include <utility>
 #include "../batch_norm-inl.h"
-#include "acl_layer.h"
+#include "acl_operator.h"
 
 namespace mxnet {
 namespace op {
 
 template<typename xpu, typename DType>
-class ACLBatchNormOp : public BatchNormOp<xpu, DType, DType>,public ACLBaseLayer<arm_compute::CLBatchNormalizationLayer,arm_compute::NEBatchNormalizationLayer> {
+class ACLBatchNormOp : public BatchNormOp<xpu, DType, DType>,ACLOperator  {
  private:
   BatchNormParam param_;
   Context ctx_;
-  bool is_gpu_;
 
   void PrepareHelpSetupACLLayer(const OpContext &ctx, const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
@@ -50,80 +49,39 @@ class ACLBatchNormOp : public BatchNormOp<xpu, DType, DType>,public ACLBaseLayer
       unsigned int out_height=oshape[3];
       arm_compute::TensorShape in_shape (in_width, in_height,in_channels,in_num);
       arm_compute::TensorShape out_shape(out_width, out_height,out_channels,out_num);
-      checkreshape(in_shape,is_gpu_);
-      if (!this->init_layer_) return;
-      this->init_layer_=false;
+      if (is_operator_init_done(in_shape)) return;
+      set_operator_init_done();
       PrepareHelpSetupACLLayer(ctx,in_data,req,out_data,aux_args);
-      // Initialize ACL.
-      if (is_gpu_) {
-          new_gpulayer();
-      }else{
-          new_cpulayer();
-      }
 
+      // Initialize ACL.
       this->force_bypass_acl_path_=false;
-      DType * input_data =in_data[batchnorm::kData].dptr<DType>();
-      DType * output_data =out_data[batchnorm::kOut].dptr<DType>();
-      const TBlob &weights         = in_data[batchnorm::kGamma];
-      const TBlob &bias            = in_data[batchnorm::kBeta];
-      const TBlob &meanVector      = out_data[batchnorm::kMean];
-      const TBlob &varianceVector  = out_data[batchnorm::kVar];
-      DType *mean = meanVector.dptr<DType>();
-      DType  *var = varianceVector.dptr<DType>();
-      DType        *gamma_val = weights.dptr<DType>();
-      const DType  *beta_val = bias.dptr<DType>();
       arm_compute::TensorShape mean_shape(in_channels);
       arm_compute::TensorShape var_shape=mean_shape;
       arm_compute::TensorShape beta_shape=mean_shape;
       arm_compute::TensorShape gamma_shape=mean_shape;
 
-      if (is_gpu_) {
-          new_tensor(this->gpu().input,in_shape,(void*)input_data);
-          new_tensor(this->gpu().output,out_shape,(void*)output_data);
-          new_tensor(this->gpu().mean,mean_shape);
-          new_tensor(this->gpu().var,var_shape);
-          new_tensor(this->gpu().beta,beta_shape);
-          new_tensor(this->gpu().gamma,gamma_shape);
-          tensor_mem(this->gpu().mean,(void*)mean);
-          tensor_mem(this->gpu().var,(void*)var);
-          tensor_mem(this->gpu().beta,(void*)beta_val);
-          tensor_mem(this->gpu().gamma,(void*)gamma_val);
-          this->gpu().mean->commit();
-          this->gpu().var->commit();
-          this->gpu().beta->commit();
-          this->gpu().gamma->commit();
-#ifdef USE_PROFILING
-        logtime_util log_time(ACL_CONFIG_INFO);
-#endif //USE_PROFILING
-        this->gpu().layer->configure(this->gpu().input,this->gpu().output,this->gpu().mean,this->gpu().var,this->gpu().beta,this->gpu().gamma,param_.eps);
-      }else{
-          new_tensor(this->cpu().input,in_shape,(void*)input_data);
-          new_tensor(this->cpu().output,out_shape,(void*)output_data);
-          new_tensor(this->cpu().mean,mean_shape);
-          new_tensor(this->cpu().var,var_shape);
-          new_tensor(this->cpu().beta,beta_shape);
-          new_tensor(this->cpu().gamma,gamma_shape);
-          tensor_mem(this->cpu().mean,(void*)mean);
-          tensor_mem(this->cpu().var,(void*)var);
-          tensor_mem(this->cpu().beta,(void*)beta_val);
-          tensor_mem(this->cpu().gamma,(void*)gamma_val);
-          this->cpu().mean->commit();
-          this->cpu().var->commit();
-          this->cpu().beta->commit();
-          this->cpu().gamma->commit();
-#ifdef USE_PROFILING
-        logtime_util log_time(ACL_CONFIG_INFO);
-#endif //USE_PROFILING
-        this->cpu().layer->configure(this->cpu().input,this->cpu().output,this->cpu().mean,this->cpu().var,this->cpu().beta,this->cpu().gamma,param_.eps);
-      }
+      new_tensor(input(),in_shape,InputdataPtr<DType>(ACLOp_Ptr(this),in_data,batchnorm::kData));
+      new_tensor(output(),out_shape,OutputdataPtr<DType>(ACLOp_Ptr(this),out_data,batchnorm::kOut));
+      new_tensor(mean(),mean_shape,GetDataPtr<DType>(ACLOp_Ptr(this),out_data,batchnorm::kMean));
+      new_tensor(var(),var_shape,GetDataPtr<DType>(ACLOp_Ptr(this),out_data,batchnorm::kVar));
+      new_tensor(beta(),beta_shape,GetDataPtr<DType>(ACLOp_Ptr(this),in_data,batchnorm::kBeta));
+      new_tensor(gamma(),gamma_shape,GetDataPtr<DType>(ACLOp_Ptr(this),in_data,batchnorm::kGamma));
+      acl_configure(bn,this,param_.eps);
+
+  }
+  bool Bypass_acl() {
+    bool bypass_acl=false;
+    if (this->force_bypass_acl_path_){
+        bypass_acl=true;
+    }
+    return bypass_acl;
   }
 
  public:
   explicit ACLBatchNormOp(Context & ctx,BatchNormParam p)
-      : BatchNormOp<xpu, DType, DType>(p) {
+      : BatchNormOp<xpu, DType, DType>(p) , ACLOperator(ctx.arm_gpu_mode()){
     this->param_ = p;
     this->ctx_ = ctx;
-    this->is_gpu_ = ctx_.arm_gpu_mode();
     this->force_bypass_acl_path_= bypass_acl_class_layer & FLAGS_ENABLE_ACL_BN;
   }
 
@@ -135,14 +93,12 @@ class ACLBatchNormOp : public BatchNormOp<xpu, DType, DType>,public ACLBaseLayer
 #ifdef USE_PROFILING
   logtime_util log_time(ACL_BN_INFO);
 #endif //USE_PROFILING
-      if (this->force_bypass_acl_path_){
+      if (Bypass_acl()){
           BatchNormOp<xpu, DType, DType>::Forward(ctx,in_data,req,out_data,aux_args);
           return;
       }
-      DType * input_data =in_data[batchnorm::kData].dptr<DType>();
-      DType * output_data =out_data[batchnorm::kOut].dptr<DType>();
       SetupACLLayer(ctx,in_data,req,out_data,aux_args);
-      acl_run((void*)input_data,(void*)output_data,is_gpu_);
+      mxnet::op::acl_run<DType>(ACLOp_Ptr(this),in_data,out_data);
   }
 };  // class ACLBatchNormOp
 }  // namespace op

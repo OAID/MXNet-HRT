@@ -3,8 +3,8 @@ ROOTDIR = $(CURDIR)
 ifndef config
 ifdef CXXNET_CONFIG
 	config = $(CXXNET_CONFIG)
-else ifneq ("$(wildcard ./config.mk)","")
-	config = config.mk
+else ifneq ("$(wildcard ./config.mk.acl)","")
+	config = config.mk.acl
 else
 	config = make/config.mk
 endif
@@ -67,6 +67,9 @@ ifeq ($(USE_ACL), 1)
         LDFLAGS += $(foreach librarydir,$(ACL_LIBS_DIR),-L$(librarydir))
 	LDFLAGS += $(foreach library,$(ACL_LIBS),-l$(library))
 endif
+ifeq ($(USE_OPENCL), 1)
+	CFLAGS += -DUSE_OPENCL
+endif
 ifeq ($(USE_PROFILING), 1)
        CFLAGS += -DUSE_PROFILING
 endif
@@ -87,8 +90,8 @@ endif
 
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
-	CFLAGS += -DMXNET_USE_OPENCV=1 $(shell pkg-config --cflags opencv)
-	LDFLAGS += $(filter-out -lopencv_ts, $(shell pkg-config --libs opencv))
+	CFLAGS += -DMXNET_USE_OPENCV=1 `pkg-config --cflags opencv`
+	LDFLAGS += $(filter-out -lopencv_ts, `pkg-config --libs opencv`)
 	BIN += bin/im2rec
 else
 	CFLAGS+= -DMXNET_USE_OPENCV=0
@@ -153,6 +156,15 @@ endif
 	cython2 cython3 cython cyclean
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages
+
+
+install:
+	install -d $(AIDDIR)/MxNetOnACL/include
+	install -d $(AIDDIR)/MxNetOnACL/lib
+	cp -rfp ./include/mxnet/* $(AIDDIR)/MxNetOnACL/include
+	cp -rfp ./lib/* $(AIDDIR)/MxNetOnACL/lib
+	chown -R root:root $(AIDDIR)/MxNetOnACL
+
 
 SRC = $(wildcard src/*/*/*.cc src/*/*.cc src/*.cc)
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))

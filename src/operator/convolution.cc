@@ -65,34 +65,8 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
   }
 #endif
 #if USE_ACL == 1
-  bool use_direct_conv_=false;
-  const char* pDirectConv;
-  pDirectConv = getenv ("DIRECTCONV");
-  if (pDirectConv){
-    unsigned int bdirectconv;
-    sscanf(pDirectConv,"%i", &bdirectconv);
-    if(bdirectconv != use_direct_conv_){
-        use_direct_conv_ = bdirectconv;
-        printf("DIRECTCONV<%s>\n", pDirectConv);
-        printf("DIRECTCONV: %x\n", use_direct_conv_);
-    }
-  }
   if (dtype==mshadow::kFloat32){
-      int pad_data[2],kernel[2];
-      if (param.kernel.ndim() == 1) {
-        pad_data[1]=pad_data[0]=param.pad[0];
-        kernel[1]=kernel[0]=param.kernel[0];
-      } else if (param.kernel.ndim() == 2) {
-        pad_data[1]=param.pad[0];pad_data[0]=param.pad[1];
-        kernel[1]=param.kernel[0];kernel[0]=param.kernel[1];
-      } else{
-          pad_data[0]=0;pad_data[1]=0;
-          kernel[0]=0;kernel[1]=0;
-      }
-      if (use_direct_conv_ && ( (kernel[0]==1 && kernel[1]==1 &&pad_data[0]==0 && pad_data[1]==0) || (kernel[0]==3 && kernel[1]==3 && pad_data[0]<=1 && pad_data[1] <=1 ) )) {
-        return new ACLConvolutionOp<cpu, float,arm_compute::CLConvolutionLayer,arm_compute::NEDirectConvolutionLayer>(ctx,param);//NEDirectConvolutionLayer only for 1x1 and 3x3
-      }
-    return new ACLConvolutionOp<cpu, float,arm_compute::CLConvolutionLayer,arm_compute::NEConvolutionLayer>(ctx,param);
+    return new ACLConvolutionOp<cpu, float>(ctx,param);
   }
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {

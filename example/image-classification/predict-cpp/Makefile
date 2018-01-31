@@ -1,3 +1,5 @@
+export PKG_CONFIG_PATH=/usr/local/AID/pkgconfig
+
 # Special thanks to https://github.com/pertusa for the Makefile
 CFLAGS=-std=c++11 -Wno-unknown-pragmas -Wall
 
@@ -17,7 +19,8 @@ export MXNET_ROOT=`pwd`/../../../
 CFLAGS+=-Wall -I$(MXNET_ROOT)/include
 LDFLAGS+=-L$(MXNET_ROOT)/lib -lmxnet -lopenblas
 ifeq ($(USE_ACL), 1)
-LDFLAGS+=-L$(MXNET_ROOT)/../ComputeLibrary/build/arm_compute -L$(MXNET_ROOT)/../ComputeLibrary/build -larm_compute
+#LDFLAGS+=-L$(MXNET_ROOT)/../ComputeLibrary/build/arm_compute -L$(MXNET_ROOT)/../ComputeLibrary/build -larm_compute
+LDFLAGS+=`pkg-config --libs computelibrary`
 endif
 
 all:image-classification-predict image-classification-predict-forCaffeMode
