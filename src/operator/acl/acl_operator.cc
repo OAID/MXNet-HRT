@@ -44,9 +44,6 @@ unsigned int acl_log_flags = (0 | \
 #include <stdlib.h>     /* getenv */
 #endif //USE_PROFILING
 
-namespace mxnet {
-namespace op {
-
 static bool force_enable_gpu=false;
 bool AclEnableSchedule(int enable){
     enable_schedule=enable;
@@ -59,6 +56,10 @@ int isScheduleEnable()
 {
     return enable_schedule;
 }
+
+namespace mxnet {
+namespace op {
+
 bool ACLOperator::init_cl_env=true;
 bool ACLOperator::support_opencl_=false;
 bool opencl_is_available()

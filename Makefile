@@ -159,11 +159,11 @@ all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages
 
 
 install:
-	install -d $(AIDDIR)/MxNetOnACL/include
-	install -d $(AIDDIR)/MxNetOnACL/lib
-	cp -rfp ./include/mxnet/* $(AIDDIR)/MxNetOnACL/include
-	cp -rfp ./lib/* $(AIDDIR)/MxNetOnACL/lib
-	chown -R root:root $(AIDDIR)/MxNetOnACL
+	install -d $(AIDDIR)/MXNet-HRT/include
+	install -d $(AIDDIR)/MXNet-HRT/lib
+	cp -rfp ./include/mxnet/* $(AIDDIR)/MXNet-HRT/include
+	cp -rfp ./lib/* $(AIDDIR)/MXNet-HRT/lib
+	chown -R root:root $(AIDDIR)/MXNet-HRT
 
 
 SRC = $(wildcard src/*/*/*.cc src/*/*.cc src/*.cc)

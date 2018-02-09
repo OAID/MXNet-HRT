@@ -1,7 +1,7 @@
 # 1. User Quick Guide
 [![License](https://img.shields.io/badge/license-BSD-blue.svg)](LICENSE)
 
-This User Quick Guide will help you get started to setup MXNetOnACL on RK3399 quickly.
+This User Quick Guide will help you get started to setup MXNet-HRT on RK3399 quickly.
 
 # 2. Preparation
 ## 2.1 General dependencies installation
@@ -20,16 +20,16 @@ This User Quick Guide will help you get started to setup MXNetOnACL on RK3399 qu
 #### Download "AID-tools" (AID-tools : [v1.0](ftp://ftp.openailab.net/tools/package)):
 	wget ftp://ftp.openailab.net/tools/package/AID-tools.tar.gz
 	
-#### Download "MXNetOnACL" :
-	git clone --recursive https://github.com/OAID/MXNetOnACL.git
+#### Download "MXNet-HRT" :
+	git clone --recursive https://github.com/OAID/MXNet-HRT.git
 
-# 3. Build MXNetOnACL
+# 3. Build MXNet-HRT
 ## 3.1 install AID-tools :
 	sudo tar -xvf AID-tools.tar.gz -C /usr/local
 	sudo /usr/local/AID/gen-pkg-config-pc.sh /usr/local/AID
 
 ## 3.2 Build MXNet :
-	cd ~/MXNetOnACL
+	cd ~/MXNet-HRT
 	make
 	sudo make install
 	sudo /usr/local/AID/gen-pkg-config-pc.sh /usr/local/AID
@@ -43,13 +43,13 @@ This User Quick Guide will help you get started to setup MXNetOnACL on RK3399 qu
 # 4. Run Caffenet Classification
 
 ## 4.1 Download MXNet Model
-	cd ~/MXNetOnACL
+	cd ~/MXNet-HRT
 	cd model
 	   You can download MXNet pretrained model and synset text from  http://data.mxnet.io/mxnet/models/imagenet/
-	   or download model from ftp://ftp.openailab.net/tools/CaffeOnACL_test_model/models.tar.gz
+	   or download model from ftp://ftp.openailab.net/tools/Caffe-HRT_test_model/models.tar.gz
 
 ## 4.2 Run MXNet Classification 
-	cd ~/MXNetOnACL
+	cd ~/MXNet-HRT
 	example/image-classification/predict-cpp/image-classification-predict-forCaffeMode cpu model/caffenet/caffenet-symbol.json model/caffenet/caffenet-0000.params model/Inception/mean_224.nd model/synset.txt model/pictures/cat.jpg
     The output message:
     Best Result: [ tabby, tabby cat] id = 281, accuracy = 0.27792722
